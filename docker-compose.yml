@@ -1,0 +1,95 @@
+# Convenience wrapper for the P3 experiment container.
+#
+# EASIEST PATH: use ./run.sh instead — it auto-detects GPU and core count.
+#   ./run.sh smoke        ./run.sh n100
+#
+# With compose:
+#   docker compose run --rm synthetic     # env 1: synthetic Poisson arrivals
+#   docker compose run --rm trace         # env 2: real-workload trace replay
+#   docker compose run --rm n100          # 100-server cluster study
+#
+# All write into ./results/<name>/ on the host.
+#
+# GPU: NOT requested by default, so this works on any machine. The networks are
+# tiny, so cores matter far more than a GPU. To use one anyway, add to a service:
+#   deploy: {resources: {reservations: {devices: [{driver: nvidia, count: all,
+#            capabilities: [gpu]}]}}}
+
+x-common: &common
+  build:
+    context: .
+    args:
+      # override to match the cluster's CUDA version
+      BASE_IMAGE: pytorch/pytorch:2.3.1-cuda12.1-cudnn8-runtime
+  image: pltr-ma:latest
+  volumes:
+    - ./results:/results
+    - ./code:/data:ro          # trace CSVs live alongside the code
+
+services:
+  # --- environment 1: synthetic Poisson arrivals (the conference env) --------
+  synthetic:
+    <<: *common
+    environment:
+      OUT_DIR: /results/synthetic
+      N_SERVERS: "3"
+      N_ITERATIONS: "400"
+      N_SEEDS: "10"
+      PARETO_SEEDS: "10"
+      BASELINE_SEEDS: "10"
+      ABLATION_SEEDS: "5"
+      EVAL_EPISODES: "10"
+      PARETO_GRID: "8"
+      HV_MC: "200000"
+
+  # --- environment 2: real-workload trace replay (Q1 credibility) -----------
+  trace:
+    <<: *common
+    environment:
+      OUT_DIR: /results/trace
+      TRACE_PATH: /data/trace_alibaba.csv   # produced by make_trace.py alibaba
+      N_SERVERS: "3"
+      N_ITERATIONS: "400"
+      N_SEEDS: "10"
+      PARETO_SEEDS: "10"
+      BASELINE_SEEDS: "10"
+      ABLATION_SEEDS: "5"
+      EVAL_EPISODES: "10"
+      PARETO_GRID: "8"
+      HV_MC: "200000"
+
+  # --- 100-server cluster study (future work — not in the paper) ------------
+  # ~36 min per training run, ~50 runs => roughly 1-2 days on a multi-core box.
+  # Set N_WORKERS to (cores - 1) for parallelism; ablations are skipped at this
+  # scale because they are hyperparameter studies, not scale results.
+  n100:
+    <<: *common
+    environment:
+      OUT_DIR: /results/n100
+      N_SERVERS: "100"
+      N_ITERATIONS: "400"
+      N_SEEDS: "5"
+      PARETO_SEEDS: "5"
+      BASELINE_SEEDS: "5"
+      EVAL_EPISODES: "10"
+      PARETO_GRID: "8"
+      HV_MC: "200000"
+      BLOCKS: "convergence,pareto"
+      N_WORKERS: "8"          # <-- set to (number of cores - 1)
+
+  # same, on the real Alibaba trace
+  n100_trace:
+    <<: *common
+    environment:
+      OUT_DIR: /results/n100_trace
+      TRACE_PATH: /data/trace_alibaba.csv
+      N_SERVERS: "100"
+      N_ITERATIONS: "400"
+      N_SEEDS: "5"
+      PARETO_SEEDS: "5"
+      BASELINE_SEEDS: "5"
+      EVAL_EPISODES: "10"
+      PARETO_GRID: "8"
+      HV_MC: "200000"
+      BLOCKS: "convergence,pareto"
+      N_WORKERS: "8"          # <-- set to (number of cores - 1)

@@ -1,0 +1,9 @@
+# Python deps installed into the Docker image (see Dockerfile).
+#
+# torch is deliberately NOT listed here: it is supplied by the CUDA base image
+# (pytorch/pytorch:...-cuda...-runtime). Adding it would let pip replace the
+# CUDA-enabled build with a CPU-only wheel and silently disable GPU support.
+numpy>=1.24
+matplotlib>=3.7
+gymnasium>=0.28   # optional; cloud_env.py has a pure-numpy fallback if absent
+pandas>=2.0       # used by make_trace.py to convert the raw Alibaba CSV

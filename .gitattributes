@@ -1,0 +1,6 @@
+* text=auto eol=lf
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.py text eol=lf
+*.npy binary
+*.csv text eol=lf

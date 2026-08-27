@@ -1,0 +1,17 @@
+# keep the image small and reproducible
+results/
+_results_*/
+res_synth/
+res_trace/
+paper/
+journal_figs/
+**/__pycache__/
+**/*.pyc
+**/*.npz
+**/*.npy
+**/*.png
+**/*.pdf
+*.zip
+*.ipynb
+DOCKER_README.md
+QUICKSTART.md
