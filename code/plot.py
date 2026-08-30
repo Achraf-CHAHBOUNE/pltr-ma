@@ -35,8 +35,30 @@ VARIANT_ORDER = ("mappo", "lyapunov", "cpo", "lagrangian", "pltr_ma")
 
 
 def load(out_dir: str = "results") -> dict:
-    z = np.load(os.path.join(out_dir, "results.npz"), allow_pickle=True)
-    return {k: z[k] for k in z.files}
+    """Load a results bundle from either a `.npz` file, a directory containing
+    one, or a directory tree of `.npy` files (the layout of the released
+    `results/` folders). Mirrors stats.load_results so both entry points accept
+    the same inputs."""
+    if os.path.isfile(out_dir) and out_dir.endswith(".npz"):
+        z = np.load(out_dir, allow_pickle=True)
+        return {k: z[k] for k in z.files}
+
+    npz = os.path.join(out_dir, "results.npz")
+    if os.path.isfile(npz):
+        z = np.load(npz, allow_pickle=True)
+        return {k: z[k] for k in z.files}
+
+    R = {}
+    for root, _, files in os.walk(out_dir):
+        for f in files:
+            if f.endswith(".npy"):
+                key = os.path.relpath(os.path.join(root, f), out_dir)
+                R[key.replace(os.sep, "/")[:-4]] = np.load(
+                    os.path.join(root, f), allow_pickle=True)
+    if not R:
+        raise FileNotFoundError(
+            f"no results.npz or .npy files found under {out_dir}")
+    return R
 
 
 # --------------------------------------------------------------------------- #
